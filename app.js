@@ -20,8 +20,10 @@ const helmet=require('helmet')
 const campgroundRoutes=require('./routes/campgrounds')
 const reviewRoutes=require('./routes/reviews')
 const userRoutes=require('./routes/users')
+const dbUrl=process.env.DB_URL||'mongodb://localhost:27017/yelp-camp'
 
-mongoose.connect('mongodb://localhost:27017/yelp-camp',{
+const MongoStore=require('connect-mongo')
+mongoose.connect(dbUrl,{
     useNewUrlParser:true ,
     useCreateIndex:true ,
     useUnifiedTopology:true,
@@ -46,9 +48,23 @@ app.use(express.static(path.join(__dirname,'public')))
 app.use(mongoSanitize({
     replaceWith:'_'
 }))
+const secret=process.env.SECRET||'Thisshouldbeabettersecret'
+
+const store =MongoStore.create({
+    mongoUrl:dbUrl,
+    touchAfter:24*60*60,
+    crypto:{
+        secret:secret
+    }
+})
+
+store.on("error",function(e){
+    console.log("SESSION STORE ERROR",e)
+})
 const sessionConfig={
+    store,
     name:'session',
-    secret:'Thisshouldbeabettersecret',
+    secret:secret,
     resave:false,
     saveUninitialized:true,
     cookie:{
